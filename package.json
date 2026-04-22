@@ -20,7 +20,10 @@
     },
     "win": {
       "icon": "assets/icon.ico",
-      "target": ["nsis", "portable"]
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "zip",  "arch": ["x64"] }
+      ]
     },
     "files": [
       "main.js",

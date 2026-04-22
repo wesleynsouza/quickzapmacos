@@ -1,6 +1,8 @@
 const { app, BrowserWindow, shell, ipcMain, globalShortcut, clipboard, dialog, nativeImage } = require('electron')
 const path = require('path')
 
+const isMac = process.platform === 'darwin'
+
 let mainWindow = null
 let blockBlur = false
 let lastOfferedClipboard = ''
@@ -22,8 +24,7 @@ function createWindow() {
     resizable: false,
     frame: false,
     transparent: false,
-    vibrancy: 'under-window',
-    visualEffectState: 'active',
+    ...(isMac ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
     backgroundColor: '#1a1a1a',
     show: false,
     webPreferences: {
