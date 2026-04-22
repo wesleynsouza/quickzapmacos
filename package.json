@@ -4,7 +4,7 @@
   "description": "Open WhatsApp instantly from any phone number format",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "open -n node_modules/electron/dist/Electron.app --args $PWD",
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
     "build:all": "electron-builder --mac --win"
@@ -15,7 +15,8 @@
     "mac": {
       "icon": "assets/icon.icns",
       "category": "public.app-category.utilities",
-      "target": ["dmg", "zip"]
+      "target": ["dmg", "zip"],
+      "identity": null
     },
     "win": {
       "icon": "assets/icon.ico",
@@ -25,12 +26,11 @@
       "main.js",
       "preload.js",
       "index.html",
-      "assets/**/*",
-      "!assets/*.png"
+      "assets/**/*"
     ]
   },
   "devDependencies": {
-    "electron": "^29.0.0",
+    "electron": "^36.0.0",
     "electron-builder": "^24.0.0"
   }
 }

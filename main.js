@@ -1,7 +1,10 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, clipboard, dialog, shell } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, globalShortcut, clipboard, dialog, nativeImage } = require('electron')
 const path = require('path')
 
 let mainWindow = null
+let blockBlur = false
+let lastOfferedClipboard = ''
+let checkingClipboard = false
 
 function cleanPhone(raw) {
   return raw.replace(/\D/g, '')
@@ -12,22 +15,16 @@ function isLikelyPhone(text) {
   return digits.length >= 8 && digits.length <= 15
 }
 
-function openWhatsApp(phone) {
-  const number = cleanPhone(phone)
-  // Try WhatsApp desktop protocol first; falls back to OS default if not installed
-  shell.openExternal(`whatsapp://send?phone=${number}`).catch(() => {
-    shell.openExternal(`https://wa.me/${number}`)
-  })
-}
-
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 420,
-    height: 280,
+    height: 320,
     resizable: false,
     frame: false,
     transparent: false,
-    alwaysOnTop: true,
+    vibrancy: 'under-window',
+    visualEffectState: 'active',
+    backgroundColor: '#1a1a1a',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -40,7 +37,7 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
-    checkClipboardOnOpen()
+    mainWindow.focus()
   })
 
   mainWindow.on('closed', () => {
@@ -48,15 +45,31 @@ function createWindow() {
   })
 
   mainWindow.on('blur', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
+    if (blockBlur) return
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isMinimized()) {
       mainWindow.hide()
     }
   })
 }
 
 async function checkClipboardOnOpen() {
-  const text = clipboard.readText().trim()
-  if (!text || !isLikelyPhone(text)) return
+  if (checkingClipboard) return
+  checkingClipboard = true
+  blockBlur = true
+  let text = ''
+  try {
+    text = clipboard.readText().trim()
+  } catch (_) {
+    blockBlur = false
+    checkingClipboard = false
+    return
+  }
+
+  if (!text || !isLikelyPhone(text) || text === lastOfferedClipboard) {
+    blockBlur = false
+    checkingClipboard = false
+    return
+  }
 
   const { response } = await dialog.showMessageBox(mainWindow, {
     type: 'question',
@@ -67,9 +80,25 @@ async function checkClipboardOnOpen() {
     detail: text,
   })
 
+  lastOfferedClipboard = text
+  blockBlur = false
+  checkingClipboard = false
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.focus()
+
   if (response === 0 && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('paste-phone', text)
   }
+}
+
+function showWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow()
+    return
+  }
+  const wasHidden = !mainWindow.isVisible()
+  mainWindow.show()
+  mainWindow.focus()
+  if (wasHidden) checkClipboardOnOpen()
 }
 
 function toggleWindow() {
@@ -80,9 +109,7 @@ function toggleWindow() {
   if (mainWindow.isVisible()) {
     mainWindow.hide()
   } else {
-    mainWindow.show()
-    mainWindow.focus()
-    checkClipboardOnOpen()
+    showWindow()
   }
 }
 
@@ -93,6 +120,7 @@ app.whenReady().then(() => {
 
   app.on('activate', () => {
     if (!mainWindow || mainWindow.isDestroyed()) createWindow()
+    else showWindow()
   })
 })
 
@@ -101,14 +129,19 @@ app.on('will-quit', () => {
 })
 
 app.on('window-all-closed', () => {
-  // Keep app running in background on macOS
   if (process.platform !== 'darwin') app.quit()
 })
 
 ipcMain.on('open-whatsapp', (_event, phone) => {
-  openWhatsApp(phone)
+  const number = cleanPhone(phone)
+  shell.openExternal(`whatsapp://send?phone=${number}`).catch(() => {
+    shell.openExternal(`https://wa.me/${number}`)
+  })
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
 })
+
+
+ipcMain.handle('read-clipboard', () => clipboard.readText())
 
 ipcMain.on('close-window', () => {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
