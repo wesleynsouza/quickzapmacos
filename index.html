@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuickZap</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #25d366;
+      --accent-hover: #1db954;
+      --text: #e8e8e8;
+      --muted: #666;
+      --radius: 12px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', system-ui, sans-serif;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 20px;
+      gap: 16px;
+    }
+
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .titlebar-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    .titlebar-actions {
+      display: flex;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .btn-icon {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .btn-icon:hover { color: var(--text); background: var(--border); }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    .btn-open {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #000;
+      cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 20px;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .btn-open:hover { background: var(--accent-hover); }
+    .btn-open:active { transform: scale(0.97); }
+    .btn-open:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .preview {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      min-height: 16px;
+      transition: color 0.2s;
+    }
+
+    .preview.valid { color: var(--accent); }
+
+    .shortcut-hint {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: auto;
+    }
+
+    .shortcut-hint kbd {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="titlebar">
+      <span class="titlebar-title">QuickZap</span>
+      <div class="titlebar-actions">
+        <button class="btn-icon" id="btn-minimize" title="Minimizar">–</button>
+        <button class="btn-icon" id="btn-close" title="Fechar">✕</button>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Número de telefone</label>
+      <div class="input-row">
+        <input
+          type="text"
+          id="phone-input"
+          placeholder="+55 63 99253-2700"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="btn-open" id="btn-open" disabled>Abrir</button>
+      </div>
+      <div class="preview" id="preview"></div>
+    </div>
+
+    <p class="shortcut-hint">
+      <kbd>⌘ Shift W</kbd> para abrir/fechar
+    </p>
+  </div>
+
+  <script>
+    const input = document.getElementById('phone-input')
+    const btnOpen = document.getElementById('btn-open')
+    const preview = document.getElementById('preview')
+
+    function clean(val) {
+      return val.replace(/\D/g, '')
+    }
+
+    function isValid(digits) {
+      return digits.length >= 8 && digits.length <= 15
+    }
+
+    input.addEventListener('input', () => {
+      const digits = clean(input.value)
+      const valid = isValid(digits)
+      btnOpen.disabled = !valid
+      if (valid) {
+        preview.textContent = `wa.me/${digits}`
+        preview.className = 'preview valid'
+      } else {
+        preview.textContent = digits.length > 0 ? `${digits.length} dígito(s) — mínimo 8` : ''
+        preview.className = 'preview'
+      }
+    })
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !btnOpen.disabled) open()
+      if (e.key === 'Escape') window.quickzap.closeWindow()
+    })
+
+    btnOpen.addEventListener('click', open)
+
+    document.getElementById('btn-close').addEventListener('click', () => window.quickzap.closeWindow())
+    document.getElementById('btn-minimize').addEventListener('click', () => window.quickzap.minimizeWindow())
+
+    function open() {
+      const digits = clean(input.value)
+      if (!isValid(digits)) return
+      window.quickzap.openWhatsApp(digits)
+    }
+
+    window.quickzap.onPastePhone((value) => {
+      input.value = value
+      input.dispatchEvent(new Event('input'))
+      input.select()
+    })
+
+    input.focus()
+  </script>
+</body>
+</html>
