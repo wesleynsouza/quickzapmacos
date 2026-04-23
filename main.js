@@ -1,12 +1,19 @@
-const { app, BrowserWindow, shell, ipcMain, globalShortcut, clipboard, dialog, nativeImage } = require('electron')
+const { app, BrowserWindow, Tray, Menu, shell, ipcMain, globalShortcut, clipboard, dialog, nativeImage } = require('electron')
 const path = require('path')
 
 const isMac = process.platform === 'darwin'
 
 let mainWindow = null
+let tray = null
+let isQuitting = false
 let blockBlur = false
 let lastOfferedClipboard = ''
 let checkingClipboard = false
+
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+}
 
 function cleanPhone(raw) {
   return raw.replace(/\D/g, '')
@@ -45,11 +52,42 @@ function createWindow() {
     mainWindow = null
   })
 
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault()
+      mainWindow.hide()
+    }
+  })
+
   mainWindow.on('blur', () => {
     if (blockBlur) return
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isMinimized()) {
       mainWindow.hide()
     }
+  })
+}
+
+function createTray() {
+  if (tray) return
+  const iconPath = path.join(__dirname, 'assets', isMac ? 'icon.png' : 'icon.ico')
+  const image = nativeImage.createFromPath(iconPath)
+  tray = new Tray(isMac ? image.resize({ width: 16, height: 16 }) : image)
+  tray.setToolTip('QuickZap')
+
+  const menu = Menu.buildFromTemplate([
+    { label: 'Abrir QuickZap', click: () => showWindow() },
+    { type: 'separator' },
+    { label: 'Sair', click: () => { isQuitting = true; app.quit() } },
+  ])
+  tray.setContextMenu(menu)
+
+  tray.on('click', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow()
+      return
+    }
+    if (mainWindow.isVisible()) mainWindow.hide()
+    else showWindow()
   })
 }
 
@@ -116,8 +154,13 @@ function toggleWindow() {
 
 app.whenReady().then(() => {
   createWindow()
+  if (!isMac) createTray()
 
   globalShortcut.register('CommandOrControl+Shift+W', toggleWindow)
+
+  app.on('second-instance', () => {
+    showWindow()
+  })
 
   app.on('activate', () => {
     if (!mainWindow || mainWindow.isDestroyed()) createWindow()
@@ -125,12 +168,16 @@ app.whenReady().then(() => {
   })
 })
 
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (isMac) return
 })
 
 ipcMain.on('open-whatsapp', (_event, phone) => {
