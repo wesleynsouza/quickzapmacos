@@ -12,6 +12,7 @@
   "build": {
     "appId": "com.quickzap.app",
     "productName": "QuickZap",
+    "afterPack": "./scripts/afterPack.js",
     "mac": {
       "icon": "assets/icon.icns",
       "category": "public.app-category.utilities",
