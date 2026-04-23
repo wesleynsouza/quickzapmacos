@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('quickzap', {
+  platform:      process.platform,
   openWhatsApp:  (phone) => ipcRenderer.send('open-whatsapp', phone),
   closeWindow:   ()      => ipcRenderer.send('close-window'),
   minimizeWindow:()      => ipcRenderer.send('minimize-window'),

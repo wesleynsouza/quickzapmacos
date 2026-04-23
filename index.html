@@ -545,8 +545,16 @@
     // ── IPC from main process ──────────────────────────────
     window.quickzap.onPastePhone(value => { fillInputs(value); numberEl.focus() })
 
-    document.getElementById('btn-close').addEventListener('mousedown', (e) => { e.preventDefault(); window.quickzap.closeWindow() })
-    document.getElementById('btn-minimize').addEventListener('mousedown', (e) => { e.preventDefault(); window.quickzap.minimizeWindow() })
+    const isMacRenderer = window.quickzap.platform === 'darwin'
+    const btnClose    = document.getElementById('btn-close')
+    const btnMinimize = document.getElementById('btn-minimize')
+    if (isMacRenderer) {
+      btnClose.addEventListener('mousedown',    (e) => { e.preventDefault(); window.quickzap.closeWindow() })
+      btnMinimize.addEventListener('mousedown', (e) => { e.preventDefault(); window.quickzap.minimizeWindow() })
+    } else {
+      btnClose.addEventListener('click',    () => window.quickzap.closeWindow())
+      btnMinimize.addEventListener('click', () => window.quickzap.minimizeWindow())
+    }
 
     // ── Init ───────────────────────────────────────────────
     prefixEl.value = '55'

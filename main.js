@@ -45,6 +45,10 @@ function createWindow() {
 
   mainWindow.loadFile('index.html')
 
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.key === 'F12') mainWindow.webContents.toggleDevTools()
+  })
+
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
     mainWindow.focus()
@@ -70,6 +74,7 @@ function createWindow() {
   })
 
   mainWindow.on('focus', () => {
+    if (mainWindow.isMinimized()) return
     checkClipboardOnOpen()
   })
 }
@@ -106,6 +111,7 @@ function createTray() {
 
 async function checkClipboardOnOpen() {
   if (checkingClipboard) return
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return
   checkingClipboard = true
   blockBlur = true
   let text = ''
@@ -210,5 +216,10 @@ ipcMain.on('close-window', () => {
 })
 
 ipcMain.on('minimize-window', () => {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize()
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) return
+  console.log('[minimize-window] invoking minimize()')
+  mainWindow.blur()
+  mainWindow.minimize()
+  console.log('[minimize-window] isMinimized after:', mainWindow.isMinimized())
 })
