@@ -29,6 +29,8 @@ function createWindow() {
     width: 420,
     height: 320,
     resizable: false,
+    minimizable: true,
+    maximizable: false,
     frame: false,
     transparent: false,
     ...(isMac ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
@@ -91,8 +93,14 @@ function createTray() {
       createWindow()
       return
     }
-    if (mainWindow.isVisible()) mainWindow.hide()
-    else showWindow()
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+      mainWindow.focus()
+    } else if (mainWindow.isVisible()) {
+      mainWindow.hide()
+    } else {
+      showWindow()
+    }
   })
 }
 
@@ -148,7 +156,10 @@ function toggleWindow() {
     createWindow()
     return
   }
-  if (mainWindow.isVisible()) {
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore()
+    mainWindow.focus()
+  } else if (mainWindow.isVisible()) {
     mainWindow.hide()
   } else {
     showWindow()
