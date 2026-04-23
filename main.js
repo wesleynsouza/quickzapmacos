@@ -66,6 +66,10 @@ function createWindow() {
       mainWindow.hide()
     }
   })
+
+  mainWindow.on('focus', () => {
+    checkClipboardOnOpen()
+  })
 }
 
 function createTray() {
@@ -135,10 +139,8 @@ function showWindow() {
     createWindow()
     return
   }
-  const wasHidden = !mainWindow.isVisible()
   mainWindow.show()
   mainWindow.focus()
-  if (wasHidden) checkClipboardOnOpen()
 }
 
 function toggleWindow() {
