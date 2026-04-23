@@ -60,6 +60,7 @@ function createWindow() {
   })
 
   mainWindow.on('blur', () => {
+    if (!isMac) return
     if (blockBlur) return
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isMinimized()) {
       mainWindow.hide()
